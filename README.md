@@ -4,7 +4,7 @@
 Pure javascript without any libraries.
 
 ### Demo
-https://github.com/jurip0
+https://jurip0.github.io/json-and-tabbedtext-to-sql/
 
 ### Limitations
 
