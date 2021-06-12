@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Json/Tab seperated text to Sql Insert</title>
+
+    <style>
+        header {
+            border-bottom: solid 1px gray;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .title {
+            font-size: 22px;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        body {
+            font-family: monospace;
+        }
+
+        .container {
+            margin: auto;
+            width: 50%;
+            margin-top: 5%;
+            text-align: center;
+        }
+
+        .title2 {
+            display: inline-block;
+        }
+
+        .input {
+            width: 500px;
+            height: 250px;
+            resize: none;
+        }
+
+        .output {
+            width: 500px;
+            height: 250px;
+            resize: none;
+        }
+
+        .buttonContainer {
+            margin: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="title">Json/Tab seperated text to Sql Insert</div>
+        <a href="">Github</a>
+    </header>
+
+    <div class="container">
+        <div class="">
+            <div class="title2">Input</div>
+        </div>
+        <div class="buttonContainer">
+            <button id="jsonExample">Json example</button>
+            <button id="tabExample">Tab separated example</button>
+        </div>
+        <textarea id="inputText" class="input"></textarea>
+        <div class="buttonContainer">
+            <button id="fromJson">Generate from json</button>
+            <button id="fromTab">Generate from tab separated text</button>
+        </div>
+        <div class="">
+            <div class="title2">Output</div>
+        </div>
+        <textarea id="outputText" class="output" readonly></textarea>
+    </div>
+
+    <script>
+
+        var jsonGenBtn = document.getElementById("fromJson");
+        var tabGenBtn = document.getElementById("fromTab");
+        var inputText = document.getElementById("inputText");
+        var outputText = document.getElementById("outputText");
+        var jsonExampleBtn = document.getElementById("jsonExample");
+        var tabExampleBtn = document.getElementById("tabExample");
+        
+        var outputResult = "";
+
+        const newLine = "\n";
+        const tempTableName = "[TABLENAME]";
+
+        const SQLTypes = {
+            "string": "TEXT",
+            "number": "INT",
+            "boolean": "BIT",
+            "date": "DATETIME2",
+            "object": "TEXT"
+        };
+
+        const InputTypes = {
+            "JSON": 1,
+            "TEXT": 2
+        };
+
+        const CreateTableLine = (tableName, properties) => `CREATE ${tableName} IF NOT EXISTS ${tableName} (${properties});` + newLine;
+        const CreateTempTableLine = (tableName, properties) => `CREATE #${tableName} (${properties});` + newLine;
+        const InserValueLine = (tableName, columnTypes, values) => `INSERT INTO ${tableName} (${columnTypes.join(",")}) VALUES (${values.map(x => FormatValue(x)).join(',')});` + newLine;
+        const CopyTextToClipboard = async (text) => {
+            await navigator.clipboard.writeText(text);
+        };
+        const GetType = (value) => {
+            return !isNaN(Date.parse(value)) && typeof (value) == "string" ? SQLTypes["date"] : SQLTypes[typeof (value)];
+        };
+        const FormatValue = (value) => {
+             if (!isNaN(value)) {
+                value = parseInt(value)
+             }
+            return typeof (value) == "string" ? `'${value}'` : `${value}`;
+        };
+
+        var jsonExampleObj = {
+            "User": [
+                {
+                    "id": 123,
+                    "name": 'name1',
+                    "date": "2021-01-01"
+
+                },
+                {
+                    "id": 321,
+                    "name": "name2",
+                    "date": "2021-01-01"
+
+                }
+
+            ],
+            "User2": [
+                {
+                    "id": 3213,
+                    "name": "name3"
+
+                },
+                {
+                    "id": 32131,
+                    "name": "name4"
+
+                }
+
+            ]
+
+        };
+
+        var tabSeparatedInputExample = `Id	User	Date
+100	User1	2020-05-07 09:45:31.477
+101	User2	2020-05-07 12:21:50.633
+102	User3	2020-05-07 12:27:11.163`
+
+        jsonGenBtn.onclick = e => GenerateSQL(InputTypes.JSON);
+        tabGenBtn.onclick = e => GenerateSQL(InputTypes.TEXT);
+        jsonExampleBtn.onclick = e => inputText.value = JSON.stringify(jsonExampleObj, null, 2);
+        tabExampleBtn.onclick = e => inputText.value = tabSeparatedInputExample;
+
+
+        function GenerateSQL(inputType) {
+
+            if (inputType == InputTypes.JSON) {
+
+                var obj = JSON.parse(inputText.value);
+
+                for (const [table, rows] of Object.entries(obj)) {
+
+                    var types = Object.values(rows[0]).map(x => GetType(x));
+                    var properties = Object.keys(rows[0]).map((e, i) => e + " " + types[i]);
+                    var createLine = CreateTempTableLine(table, properties);
+                    var insertLines = "";
+
+                    for (const row of rows) {
+
+                        insertLines += InserValueLine(table, Object.keys(row), Object.values(row));
+                    }
+
+                    outputResult += newLine + createLine + insertLines;
+
+                }
+            }
+            else if (inputType == InputTypes.TEXT) {
+
+                parsedTabSeparatedInput = (inputText.value).split('\n').map(function (ln) {
+                    return ln.split('\t');
+                });
+
+                var headers = parsedTabSeparatedInput[0];
+                parsedTabSeparatedInput.shift();
+                var values = parsedTabSeparatedInput;
+
+                for (const value of values) {
+                    outputResult += newLine + InserValueLine(tempTableName, headers, value);
+                }
+
+            }
+
+            outputText.value = outputResult;
+            outputResult = "";
+
+        }
+
+    </script>
+
+</body>
+
+</html>
